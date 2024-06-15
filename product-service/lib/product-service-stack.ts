@@ -22,7 +22,10 @@ export class ProductServiceStack extends cdk.Stack {
     });
 
     // API Gateway
-    const api = new apigateway.RestApi(this, 'productsApi');
+    const api = new apigateway.RestApi(this, 'productsApi', {
+      restApiName: 'Products Service',
+      description: 'This service serves products.',
+    });
 
     // /products endpoint
     const productsResource = api.root.addResource('products');
