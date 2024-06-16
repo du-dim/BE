@@ -15,6 +15,10 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     response = {
       statusCode: 404,
       body: JSON.stringify({ error: 'Product not found' }),
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type',
+      },
     };
   }
   console.log('Response:', response);
