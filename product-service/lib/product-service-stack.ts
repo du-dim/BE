@@ -7,18 +7,19 @@ import { join } from 'path';
 export class ProductServiceStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
+    
     // Lambda function for getProductsList
     const getProductsList = new lambda.Function(this, 'getProductsList', {
-      runtime: lambda.Runtime.NODEJS_20_X, // Обновленная версия среды выполнения
+      runtime: lambda.Runtime.NODEJS_18_X,
       handler: 'getProductsList.handler',
-      code: lambda.Code.fromAsset(join(__dirname, '../src')),
+      code: lambda.Code.fromAsset(join(__dirname, '../lambda')),
     });
 
     // Lambda function for getProductsById
     const getProductsById = new lambda.Function(this, 'getProductsById', {
-      runtime: lambda.Runtime.NODEJS_20_X, // Обновленная версия среды выполнения
+      runtime: lambda.Runtime.NODEJS_18_X,
       handler: 'getProductsById.handler',
-      code: lambda.Code.fromAsset(join(__dirname, '../src')),
+      code: lambda.Code.fromAsset(join(__dirname, '../lambda')),
     });
 
     // API Gateway
@@ -33,6 +34,6 @@ export class ProductServiceStack extends cdk.Stack {
 
     // /products/{productId} endpoint
     const productResource = productsResource.addResource('{productId}');
-    productResource.addMethod('GET', new apigateway.LambdaIntegration(getProductsById));   
+    productResource.addMethod('GET', new apigateway.LambdaIntegration(getProductsById)); 
   }
 }
