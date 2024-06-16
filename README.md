@@ -10,6 +10,7 @@ Run commands from the directory 'product-service'
 
 ### Deploy
 `cdk synth`
+
 `cdk deploy`
 
 ### Test
