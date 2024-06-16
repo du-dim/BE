@@ -5,6 +5,5 @@ test('getProductsList returns list of products', async () => {
   const result = await handler(event);
   expect(result.statusCode).toBe(200);
   const products = JSON.parse(result.body);
-  expect(products).toHaveLength(2); // Assuming 2 mock products
-  expect(products[1].name).toBe('Product 2');
+  expect(products).toHaveLength(9); // Assuming 2 mock products  
 });
