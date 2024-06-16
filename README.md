@@ -5,13 +5,13 @@
 Run commands from the directory 'product-service'
 
 ### Build
-### `npm run build`
+#### `npm run build`
 
 
 ### Deploy
-### `cdk synth`
-### `cdk deploy`
+#### `cdk synth`
+#### `cdk deploy`
 
 ### Test
-### `npm test`
+#### `npm test`
 
