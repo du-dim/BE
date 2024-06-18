@@ -2,6 +2,9 @@ openapi: 3.0.0
 info:
   title: Product Service API
   version: 1.0.0
+servers:
+  - url: https://wvolf3g561.execute-api.eu-west-1.amazonaws.com/prod
+    description: Product Service  
 paths:
   /products:
     get:
@@ -40,7 +43,9 @@ components:
       properties:
         id:
           type: string
-        name:
+        title:
+          type: string
+        description:
           type: string
         price:
           type: number
