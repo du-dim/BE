@@ -1,9 +1,10 @@
-import * as AWS from 'aws-sdk';
 import { v4 as uuidv4 } from 'uuid';
-
 import { APIGatewayProxyHandler } from 'aws-lambda';
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import { PutCommand, DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
 
-const dynamoDB = new AWS.DynamoDB.DocumentClient();
+const client = new DynamoDBClient({});
+const dynamodb = DynamoDBDocumentClient.from(client);
 
 export const createProduct: APIGatewayProxyHandler = async (event) => {
   // Парсинг тела запроса
@@ -20,12 +21,29 @@ export const createProduct: APIGatewayProxyHandler = async (event) => {
     TableName: 'Products',
     Item: product
   };
+  const productPutCommand = new PutCommand(params);
 
   try {
-    await dynamoDB.put(params).promise();
-    return { statusCode: 201, body: JSON.stringify(product) };
+    await dynamodb.send(productPutCommand)
+    return { 
+      statusCode: 201, 
+      body: JSON.stringify(product),
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+        'Access-Control-Allow-Methods': 'OPTIONS,GET,POST'
+      },
+    };
   } catch (error) {
     console.error('Failed to add product:', error);
-    return { statusCode: 500, body: JSON.stringify({ message: 'Failed to add product' }) };
+    return { 
+      statusCode: 500, 
+      body: JSON.stringify({ message: 'Failed to add product' }),
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+        'Access-Control-Allow-Methods': 'OPTIONS,GET,POST'
+      },
+    };
   }
 };

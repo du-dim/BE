@@ -71,7 +71,7 @@ export class ProductServiceStack extends cdk.Stack {
       description: 'This service serves products.',
       defaultCorsPreflightOptions: {
         allowOrigins: apigateway.Cors.ALL_ORIGINS,
-        allowMethods: apigateway.Cors.ALL_METHODS,
+        allowMethods: apigateway.Cors.ALL_METHODS,        
       },
     });
 
