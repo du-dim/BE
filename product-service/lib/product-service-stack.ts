@@ -2,17 +2,33 @@ import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
+import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import { join } from 'path';
 
 export class ProductServiceStack extends cdk.Stack {
+  public readonly productsTable: dynamodb.Table;
+  public readonly stocksTable: dynamodb.Table;
+
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
+
+    const productsTable = new dynamodb.Table(this, 'ProductsTable', {
+      partitionKey: { name: 'id', type: dynamodb.AttributeType.STRING },
+    });
+
+    const stocksTable = new dynamodb.Table(this, 'StocksTable', {
+      partitionKey: { name: 'product_id', type: dynamodb.AttributeType.STRING },
+    });
     
     // Lambda function for getProductsList
     const getProductsList = new lambda.Function(this, 'getProductsList', {
       runtime: lambda.Runtime.NODEJS_18_X,
       handler: 'getProductsList.handler',
       code: lambda.Code.fromAsset(join(__dirname, '../lambda')),
+      environment: {
+        PRODUCTS_TABLE_NAME: productsTable.tableName,
+        STOCKS_TABLE_NAME: stocksTable.tableName,
+      },
     });
 
     // Lambda function for getProductsById
@@ -20,7 +36,29 @@ export class ProductServiceStack extends cdk.Stack {
       runtime: lambda.Runtime.NODEJS_18_X,
       handler: 'getProductsById.handler',
       code: lambda.Code.fromAsset(join(__dirname, '../lambda')),
+      environment: {
+        PRODUCTS_TABLE_NAME: productsTable.tableName,
+        STOCKS_TABLE_NAME: stocksTable.tableName,
+      },
     });
+
+     const createProduct = new lambda.Function(this, 'createProduct', {
+      runtime: lambda.Runtime.NODEJS_18_X,
+      handler: 'createProduct.handler',
+      code: lambda.Code.fromAsset(join(__dirname, '../lambda')),
+      environment: {
+        PRODUCTS_TABLE_NAME: productsTable.tableName,
+      },
+    });
+
+    // Предоставление прав на чтение данных из таблиц для Lambda функций
+    productsTable.grantReadData(getProductsList);
+    productsTable.grantReadData(getProductsById);
+    productsTable.grantReadData(createProduct);
+    stocksTable.grantReadData(getProductsList);
+    stocksTable.grantReadData(getProductsById);
+
+   
 
     // API Gateway
     const api = new apigateway.RestApi(this, 'productsApi', {
@@ -35,9 +73,25 @@ export class ProductServiceStack extends cdk.Stack {
     // /products endpoint
     const productsResource = api.root.addResource('products');
     productsResource.addMethod('GET', new apigateway.LambdaIntegration(getProductsList));
+    productsResource.addMethod('POST', new apigateway.LambdaIntegration(createProduct));
 
+    
     // /products/{productId} endpoint
     const productResource = productsResource.addResource('{productId}');
     productResource.addMethod('GET', new apigateway.LambdaIntegration(getProductsById)); 
+
+    // Создание таблицы продуктов
+    this.productsTable = new dynamodb.Table(this, 'ProductsTable', {
+      partitionKey: { name: 'id', type: dynamodb.AttributeType.STRING },
+      tableName: 'Products',
+      removalPolicy: cdk.RemovalPolicy.DESTROY // Указывает политику удаления
+    });
+
+    // Создание таблицы запасов
+    this.stocksTable = new dynamodb.Table(this, 'StocksTable', {
+      partitionKey: { name: 'product_id', type: dynamodb.AttributeType.STRING },
+      tableName: 'Stocks',
+      removalPolicy: cdk.RemovalPolicy.DESTROY
+    });
   }
 }

@@ -1,26 +1,66 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { products } from './products';
+import { DynamoDB } from 'aws-sdk';
+
+// Настройка клиента DynamoDB
+const dynamodb = new DynamoDB.DocumentClient();
 
 export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   console.log('Request event:', event);  
   const productId = event.pathParameters?.productId;
-  const product = products.find(p => p.id === productId);
-  let response: APIGatewayProxyResult;
-  if (product) {
-    response = {
-      statusCode: 200,
-      body: JSON.stringify(product),
-    };
-  } else {
-    response = {
-      statusCode: 404,
-      body: JSON.stringify({ error: 'Product not found' }),
+
+  const params = {
+    TableName: 'Products', 
+    Key: {
+      id: productId
+    }
+  };
+
+  try {
+    const productResponse = await dynamodb.get(params).promise();
+    let response: APIGatewayProxyResult;
+    if (productResponse.Item) {
+      const product = productResponse.Item;
+      // Получение количества на складе для данного продукта
+      const stockResponse = await dynamodb.query({
+        TableName: 'Stocks',
+        KeyConditionExpression: 'product_id = :productId',
+        ExpressionAttributeValues: { ':productId': productId }
+      }).promise();
+
+      if (stockResponse.Items && stockResponse.Items.length > 0) {
+          product.count = stockResponse.Items[0].count;
+      } else {
+          product.count = 0;
+      }
+      response = {
+        statusCode: 200,
+        body: JSON.stringify(product),
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Headers': 'Content-Type',
+        },
+      };
+    } else {
+      response = {
+        statusCode: 404,
+        body: JSON.stringify({ error: 'Product not found' }),
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Headers': 'Content-Type',
+        },
+      };
+    }
+    console.log('Response:', response);
+    return response;
+  } catch (error) {
+    console.error('Error fetching product:', error);
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: 'Failed to fetch product' }),
       headers: {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Headers': 'Content-Type',
       },
     };
   }
-  console.log('Response:', response);
-  return response;
 };
