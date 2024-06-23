@@ -12,14 +12,20 @@ export class ProductServiceStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
+    // Создание таблицы products
     const productsTable = new dynamodb.Table(this, 'ProductsTable', {
       partitionKey: { name: 'id', type: dynamodb.AttributeType.STRING },
-    });
-
-    const stocksTable = new dynamodb.Table(this, 'StocksTable', {
-      partitionKey: { name: 'product_id', type: dynamodb.AttributeType.STRING },
+      tableName: 'Products',
+      removalPolicy: cdk.RemovalPolicy.DESTROY // Указывает политику удаления
     });
     
+    // Создание таблицы stocks
+    const stocksTable = new dynamodb.Table(this, 'StocksTable', {
+      partitionKey: { name: 'product_id', type: dynamodb.AttributeType.STRING },
+      tableName: 'Stocks',
+      removalPolicy: cdk.RemovalPolicy.DESTROY // Указывает политику удаления
+    });
+       
     // Lambda function for getProductsList
     const getProductsList = new lambda.Function(this, 'getProductsList', {
       runtime: lambda.Runtime.NODEJS_18_X,
@@ -41,8 +47,9 @@ export class ProductServiceStack extends cdk.Stack {
         STOCKS_TABLE_NAME: stocksTable.tableName,
       },
     });
-
-     const createProduct = new lambda.Function(this, 'createProduct', {
+    
+    // Lambda function for createProduct
+    const createProduct = new lambda.Function(this, 'createProduct', {
       runtime: lambda.Runtime.NODEJS_18_X,
       handler: 'createProduct.handler',
       code: lambda.Code.fromAsset(join(__dirname, '../lambda')),
@@ -57,9 +64,7 @@ export class ProductServiceStack extends cdk.Stack {
     productsTable.grantReadData(createProduct);
     stocksTable.grantReadData(getProductsList);
     stocksTable.grantReadData(getProductsById);
-
    
-
     // API Gateway
     const api = new apigateway.RestApi(this, 'productsApi', {
       restApiName: 'Products Service',
@@ -74,24 +79,9 @@ export class ProductServiceStack extends cdk.Stack {
     const productsResource = api.root.addResource('products');
     productsResource.addMethod('GET', new apigateway.LambdaIntegration(getProductsList));
     productsResource.addMethod('POST', new apigateway.LambdaIntegration(createProduct));
-
     
     // /products/{productId} endpoint
     const productResource = productsResource.addResource('{productId}');
-    productResource.addMethod('GET', new apigateway.LambdaIntegration(getProductsById)); 
-
-    // Создание таблицы продуктов
-    this.productsTable = new dynamodb.Table(this, 'ProductsTable', {
-      partitionKey: { name: 'id', type: dynamodb.AttributeType.STRING },
-      tableName: 'Products',
-      removalPolicy: cdk.RemovalPolicy.DESTROY // Указывает политику удаления
-    });
-
-    // Создание таблицы запасов
-    this.stocksTable = new dynamodb.Table(this, 'StocksTable', {
-      partitionKey: { name: 'product_id', type: dynamodb.AttributeType.STRING },
-      tableName: 'Stocks',
-      removalPolicy: cdk.RemovalPolicy.DESTROY
-    });
+    productResource.addMethod('GET', new apigateway.LambdaIntegration(getProductsById));     
   }
 }

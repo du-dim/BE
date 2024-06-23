@@ -3,13 +3,15 @@ import { DynamoDB } from 'aws-sdk';
 
 // Настройка клиента DynamoDB
 const dynamodb = new DynamoDB.DocumentClient();
+const productsTable = process.env.PRODUCTS_TABLE_NAME!;
+const stocksTable = process.env.STOCKS_TABLE_NAME!;
 
 export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   console.log('Request event:', event);  
   const productId = event.pathParameters?.productId;
 
   const params = {
-    TableName: 'Products', 
+    TableName: productsTable, 
     Key: {
       id: productId
     }
@@ -22,7 +24,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       const product = productResponse.Item;
       // Получение количества на складе для данного продукта
       const stockResponse = await dynamodb.query({
-        TableName: 'Stocks',
+        TableName: stocksTable,
         KeyConditionExpression: 'product_id = :productId',
         ExpressionAttributeValues: { ':productId': productId }
       }).promise();
