@@ -1,6 +1,6 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { QueryCommand, ScanCommand, DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
+import { QueryCommand, ScanCommand, DynamoDBDocumentClient, GetCommand } from "@aws-sdk/lib-dynamodb";
 
 const client = new DynamoDBClient({});
 const dynamodb = DynamoDBDocumentClient.from(client);
@@ -21,30 +21,27 @@ interface IProduct {
 export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   console.log('Request event:', event);  
   try {
-    const productsScanCommand = new ScanCommand({
-      TableName: productsTable
+    const productId = event.pathParameters!.productId!;
+    const productsScanCommand = new GetCommand({
+      TableName: productsTable,
+      Key: { id: productId }
     });
     const productsResponse = await dynamodb.send(productsScanCommand);
     
-    const products: IProduct[] = productsResponse.Items as IProduct[] || [];
-    console.log('Products:', products);
+    const product: IProduct = productsResponse.Item as IProduct;
+    console.log('Products:', product);
 
-    // Добавление количества на складе для каждого продукта
-    const productPromises = products.map(async (product) => {
-      const stockQueryCommand = new QueryCommand({
-        TableName: stocksTable,
-        KeyConditionExpression: 'product_id = :productId',
-        ExpressionAttributeValues: { ':productId': product.id }
-      });
-      const stockResponse = await dynamodb.send(stockQueryCommand);
-      product.count = stockResponse.Items?.[0]?.count || 0;
+    const stockQueryCommand = new QueryCommand({
+      TableName: stocksTable,
+      KeyConditionExpression: 'product_id = :productId',
+      ExpressionAttributeValues: { ':productId': product.id }
     });
-
-    await Promise.all(productPromises);
+    const stockResponse = await dynamodb.send(stockQueryCommand);
+    product.count = stockResponse.Items?.[0]?.count || 0;    
 
     const response = {
       statusCode: 200,
-      body: JSON.stringify(products),
+      body: JSON.stringify(product),
       headers: {
         "Access-Control-Allow-Origin": "*",
         "Content-Type": "application/json",

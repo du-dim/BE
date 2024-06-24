@@ -29,7 +29,6 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     const products: IProduct[] = productsResponse.Items as IProduct[] || [];
     console.log('Products:', products);
 
-    // Добавление количества на складе для каждого продукта
     const productPromises = products.map(async (product) => {
       const stockQueryCommand = new QueryCommand({
         TableName: stocksTable,
