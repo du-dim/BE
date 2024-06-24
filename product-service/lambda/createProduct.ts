@@ -1,4 +1,4 @@
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 import { APIGatewayProxyHandler } from 'aws-lambda';
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { PutCommand, DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
@@ -9,26 +9,30 @@ const dynamodb = DynamoDBDocumentClient.from(client);
 const productsTable = process.env.PRODUCTS_TABLE_NAME;
 const stocksTable = process.env.STOCKS_TABLE_NAME;
 
+if (!productsTable || !stocksTable) {
+  throw new Error("Environment variables PRODUCTS_TABLE_NAME and STOCKS_TABLE_NAME must be defined");
+}
+
 export const handler: APIGatewayProxyHandler = async (event) => {
+  const body = JSON.parse(event.body!);  
   try {
-    // Парсинг тела запроса
+    // Парсинг тела запроса    
     const body = JSON.parse(event.body!);
     console.log('body:', body);
-
     if (!body.title || !body.price || body.count === undefined) {
       return {
         statusCode: 400,
         body: JSON.stringify({ message: "Title, price, and count are required" }),
         headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
-          'Access-Control-Allow-Methods': 'OPTIONS,GET,POST'
+          "Access-Control-Allow-Origin": "*",
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Methods": "POST",
         },
       };
     }
 
     const product = {
-      id: uuidv4(),
+      id: randomUUID(),
       title: body.title,
       description: body.description || '',
       price: body.price
@@ -51,21 +55,27 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       Item: stock
     };
 
+    const productResponce = {
+      id: product.id,
+      count: stock.count,
+      price: product.price,
+      title: product.price,
+      description: product.description
+    };
+
     const productPutCommand = new PutCommand(paramsProduct);
     const stockPutCommand = new PutCommand(paramsStock);
 
     await dynamodb.send(productPutCommand);
     await dynamodb.send(stockPutCommand);
 
-    const responseObject = { ...product, count: body.count };
-    console.log(responseObject);
     return {
       statusCode: 201,
-      body: JSON.stringify(responseObject),
+      body: JSON.stringify(productResponce),
       headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
-        'Access-Control-Allow-Methods': 'OPTIONS,GET,POST'
+        "Access-Control-Allow-Origin": "*",
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Methods": "POST",
       },
     };
   } catch (error) {
@@ -74,9 +84,9 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       statusCode: 500,
       body: JSON.stringify({ message: 'Failed to add product' }),
       headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
-        'Access-Control-Allow-Methods': 'OPTIONS,GET,POST'
+        "Access-Control-Allow-Origin": "*",
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Methods": "POST",
       },
     };
   }

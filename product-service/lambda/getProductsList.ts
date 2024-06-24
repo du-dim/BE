@@ -8,6 +8,10 @@ const dynamodb = DynamoDBDocumentClient.from(client);
 const productsTable = process.env.PRODUCTS_TABLE_NAME;
 const stocksTable = process.env.STOCKS_TABLE_NAME;
 
+if (!productsTable || !stocksTable) {
+  throw new Error("Environment variables PRODUCTS_TABLE_NAME and STOCKS_TABLE_NAME must be defined");
+}
+
 interface IProduct {
   id: string;
   count?: number;
@@ -42,9 +46,9 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       statusCode: 200,
       body: JSON.stringify(products),
       headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
-        'Access-Control-Allow-Methods': 'OPTIONS,GET,POST'
+        "Access-Control-Allow-Origin": "*",
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Methods": "GET",
       },
     };
     console.log('Response:', response);
@@ -55,9 +59,9 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       statusCode: 500,
       body: JSON.stringify({ error: 'Failed to fetch products' }),      
       headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
-        'Access-Control-Allow-Methods': 'OPTIONS,GET,POST'
+        "Access-Control-Allow-Origin": "*",
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Methods": "GET",
       },
     };
   }

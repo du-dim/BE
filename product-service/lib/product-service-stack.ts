@@ -61,10 +61,11 @@ export class ProductServiceStack extends cdk.Stack {
 
     // Предоставление прав на чтение данных из таблиц для Lambda функций
     productsTable.grantReadData(getProductsList);
-    productsTable.grantReadData(getProductsById);
-    productsTable.grantReadData(createProduct);
+    productsTable.grantReadData(getProductsById);    
     stocksTable.grantReadData(getProductsList);
     stocksTable.grantReadData(getProductsById);
+    productsTable.grantWriteData(createProduct);
+    stocksTable.grantWriteData(createProduct);
    
     // API Gateway
     const api = new apigateway.RestApi(this, 'productsApi', {
@@ -74,15 +75,16 @@ export class ProductServiceStack extends cdk.Stack {
         allowOrigins: apigateway.Cors.ALL_ORIGINS,
         allowMethods: apigateway.Cors.ALL_METHODS,        
       },
-    });
+    });    
 
     // /products endpoint
     const productsResource = api.root.addResource('products');
+    
     productsResource.addMethod('GET', new apigateway.LambdaIntegration(getProductsList));
     productsResource.addMethod('POST', new apigateway.LambdaIntegration(createProduct));
     
     // /products/{productId} endpoint
     const productResource = productsResource.addResource('{productId}');
     productResource.addMethod('GET', new apigateway.LambdaIntegration(getProductsById));     
-  }
+  }  
 }
