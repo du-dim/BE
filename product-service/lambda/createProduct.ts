@@ -9,10 +9,11 @@ const dynamodb = DynamoDBDocumentClient.from(client);
 const productsTable = process.env.PRODUCTS_TABLE_NAME;
 const stocksTable = process.env.STOCKS_TABLE_NAME;
 
-export const createProduct: APIGatewayProxyHandler = async (event) => {
+export const handler: APIGatewayProxyHandler = async (event) => {
   try {
     // Парсинг тела запроса
     const body = JSON.parse(event.body!);
+    console.log('body:', body);
 
     if (!body.title || !body.price || body.count === undefined) {
       return {
