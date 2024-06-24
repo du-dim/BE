@@ -55,6 +55,7 @@ export class ProductServiceStack extends cdk.Stack {
       code: lambda.Code.fromAsset(join(__dirname, '../lambda')),
       environment: {
         PRODUCTS_TABLE_NAME: productsTable.tableName,
+        STOCKS_TABLE_NAME: stocksTable.tableName,
       },
     });
 

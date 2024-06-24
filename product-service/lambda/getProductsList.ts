@@ -5,35 +5,39 @@ import { QueryCommand, ScanCommand, DynamoDBDocumentClient } from "@aws-sdk/lib-
 const client = new DynamoDBClient({});
 const dynamodb = DynamoDBDocumentClient.from(client);
 
-const productsTable = process.env.PRODUCTS_TABLE_NAME!;
-const stocksTable = process.env.STOCKS_TABLE_NAME!;
+const productsTable = process.env.PRODUCTS_TABLE_NAME;
+const stocksTable = process.env.STOCKS_TABLE_NAME;
+
+interface IProduct {
+  id: string;
+  count?: number;
+  [key: string]: any;
+}
 
 export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   console.log('Request event:', event);  
   try {
-
     const productsScanCommand = new ScanCommand({
       TableName: productsTable
     });
-    const productsResponse = await dynamodb.send(productsScanCommand)
+    const productsResponse = await dynamodb.send(productsScanCommand);
     
-    const products = productsResponse.Items || [];    
+    const products: IProduct[] = productsResponse.Items as IProduct[] || [];
     console.log('Products:', products);
 
     // Добавление количества на складе для каждого продукта
-    for (const product of products) {
+    const productPromises = products.map(async (product) => {
       const stockQueryCommand = new QueryCommand({
         TableName: stocksTable,
         KeyConditionExpression: 'product_id = :productId',
         ExpressionAttributeValues: { ':productId': product.id }
       });
-      const stockResponse = await dynamodb.send(stockQueryCommand)
-      if (stockResponse.Items && stockResponse.Items.length > 0) {
-          product.count = stockResponse.Items[0].count;
-      } else {
-          product.count = 0;
-      }
-    }
+      const stockResponse = await dynamodb.send(stockQueryCommand);
+      product.count = stockResponse.Items?.[0]?.count || 0;
+    });
+
+    await Promise.all(productPromises);
+
     const response = {
       statusCode: 200,
       body: JSON.stringify(products),
