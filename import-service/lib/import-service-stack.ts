@@ -25,7 +25,7 @@ export class ImportServiceStack extends cdk.Stack {
     const importProductsFileLambda = new lambda.Function(this, 'importProductsFileLambda', {
       runtime: lambda.Runtime.NODEJS_18_X,
       handler: 'importProductsFile.handler',
-      code: lambda.Code.fromAsset('lib/lambdas'),
+      code: lambda.Code.fromAsset('lambda'),
       environment: {
           BUCKET_NAME: bucket.bucketName,
       },
@@ -35,7 +35,7 @@ export class ImportServiceStack extends cdk.Stack {
     const importFileParserLambda = new lambda.Function(this, 'importFileParserLambda', {
       runtime: lambda.Runtime.NODEJS_18_X,
       handler: 'importFileParser.handler',
-      code: lambda.Code.fromAsset('lib/lambdas'),
+      code: lambda.Code.fromAsset('lambda'),
     });
 
     // Настройка триггера S3 для Lambda функции
