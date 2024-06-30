@@ -11,9 +11,10 @@ export const importProductsFile: APIGatewayProxyHandler = async (event) => {
             body: JSON.stringify({ message: 'Missing name query parameter' }),
         };
     }
+    
     const { name } = event.queryStringParameters;
     const signedUrl = s3.getSignedUrl('putObject', {
-        Bucket: 'import-products',
+        Bucket: 'import-products-store',
         Key: `uploaded/${name}`,
         Expires: 60,
     });   

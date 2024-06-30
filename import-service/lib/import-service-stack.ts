@@ -10,7 +10,7 @@ export class ImportServiceStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
     const bucket = new s3.Bucket(this, 'ImportBucket', {
-      bucketName: 'import-products',
+      bucketName: 'import-products-store',
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
