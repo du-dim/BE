@@ -13,7 +13,7 @@ export const importProductsFile: APIGatewayProxyHandler = async (event) => {
     }
     const { name } = event.queryStringParameters;
     const signedUrl = s3.getSignedUrl('putObject', {
-        Bucket: 'import-store',
+        Bucket: 'import-products',
         Key: `uploaded/${name}`,
         Expires: 60,
     });   
