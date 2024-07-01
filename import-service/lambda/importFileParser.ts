@@ -1,7 +1,7 @@
 import { S3Handler } from 'aws-lambda';
-import { S3Client, GetObjectCommand} from '@aws-sdk/client-s3';
+import { S3Client, GetObjectCommand, CopyObjectCommand, DeleteObjectCommand} from '@aws-sdk/client-s3';
 import { Readable } from 'stream';
-import * as csv from 'csv-parser';
+import * as csv from "csv-parser";
 
 // Инициализация клиента S3 для взаимодействия с сервисом S3
 const s3 = new S3Client({ region: 'eu-west-1' });
@@ -11,21 +11,35 @@ export const handler: S3Handler = async (event) => {
     // Перебор всех записей в событии
     for (const record of event.Records) {
         const { bucket, object } = record.s3;
+        const sourceKey = object.key;
+        const parsedKey = sourceKey.replace('uploaded/', 'parsed/');
         const params = {
-            Bucket: process.env.BUCKET_NAME,
-            Key: object.key,
+            Bucket: bucket.name,
+            Key: sourceKey,
         };
-        console.log(params);
         try {
             // Получение объекта из S3
-            const command = new GetObjectCommand(params);
-            const { Body } = await s3.send(command);            
+            const getCommand = new GetObjectCommand(params);
+            const copyCommand = new CopyObjectCommand({
+                Bucket: bucket.name,
+                CopySource: `${bucket.name}/${sourceKey}`,
+                Key: parsedKey,
+            });
+          
+            const deleteCommand = new DeleteObjectCommand(params);
+        
+            const { Body } = await s3.send(getCommand);            
             // Преобразование Body в Readable stream
             const stream = Body as Readable;
             // Парсинг CSV
             stream.pipe(csv())
                 .on('data', (data) => console.log('Parsed record:', data))
                 .on('end', () => console.log('Parsing completed.'));
+
+            await s3.send(copyCommand);
+            await s3.send(deleteCommand);
+            console.log('CSV moved from "uploaded" to "parsed" directory and removed in "uploaded"');
+                
         } catch (error) {
             console.error(`Error processing ${object.key} from ${bucket.name}`, error);
         }

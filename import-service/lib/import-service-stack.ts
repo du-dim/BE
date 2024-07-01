@@ -24,7 +24,7 @@ export class ImportServiceStack extends cdk.Stack {
     // Добавление политики ресурса для предоставления прав на выполнение операций в S3
     bucket.addToResourcePolicy(new iam.PolicyStatement({
       actions: ['s3:*',],
-      resources: [`${bucket.bucketArn}/uploaded/*`],
+      resources: [`${bucket.bucketArn}/uploaded/*`, `${bucket.bucketArn}/parsed/*`],
       principals: [new iam.ServicePrincipal('lambda.amazonaws.com')],      
     }));
 
@@ -52,10 +52,14 @@ export class ImportServiceStack extends cdk.Stack {
     bucket.addEventNotification(s3.EventType.OBJECT_CREATED, new s3n.LambdaDestination(importFileParserLambda), {
       prefix: 'uploaded',
     });
-
+    bucket.addEventNotification(s3.EventType.OBJECT_CREATED_COPY, new s3n.LambdaDestination(importFileParserLambda), {
+      prefix: 'parsed',
+    })
+    
     // Предоставление прав на чтение и запись в S3 bucket для Lambda функций
     bucket.grantReadWrite(importProductsFileLambda);
-    bucket.grantRead(importFileParserLambda);
+    bucket.grantReadWrite(importFileParserLambda);
+    bucket.grantDelete(importFileParserLambda);
 
     // Создание API Gateway
     const api = new apigateway.RestApi(this, 'ImportServiceApi', {
