@@ -15,6 +15,7 @@ export const handler: S3Handler = async (event) => {
             Bucket: process.env.BUCKET_NAME,
             Key: object.key,
         };
+        console.log(params);
         try {
             // Получение объекта из S3
             const command = new GetObjectCommand(params);

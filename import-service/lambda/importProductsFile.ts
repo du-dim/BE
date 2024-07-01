@@ -20,14 +20,16 @@ export const handler: APIGatewayProxyHandler = async (event) => {
         Key: `uploaded/${name}`, 
     });
 
-    const signedUrl = await getSignedUrl(s3, command, { expiresIn: 60 });
-    
+    const signedUrl = await getSignedUrl(s3, command, { expiresIn: 3600 }) as any;
+    console.log('signedUrl: ', signedUrl);
+
     return {
         statusCode: 200,
-        body: JSON.stringify({ signedUrl }),
+        body: JSON.stringify(signedUrl),
         headers: {
             "Access-Control-Allow-Origin": "*",            
-            "Access-Control-Allow-Methods": "GET",
+            "Access-Control-Allow-Methods": "*",
+            'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
           },
     };
 };

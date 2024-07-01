@@ -12,13 +12,20 @@ export class ImportServiceStack extends cdk.Stack {
     const bucket = new s3.Bucket(this, 'ImportBucket', {
       bucketName: 'import-products-store',
       removalPolicy: cdk.RemovalPolicy.DESTROY,
+      cors: [
+        {
+            allowedOrigins: ['*'],
+            allowedMethods: [s3.HttpMethods.GET, s3.HttpMethods.PUT, s3.HttpMethods.POST, s3.HttpMethods.DELETE, s3.HttpMethods.HEAD],
+            allowedHeaders: ['*'],            
+        }
+      ]
     });
 
     // Добавление политики ресурса для предоставления прав на выполнение операций в S3
     bucket.addToResourcePolicy(new iam.PolicyStatement({
-      actions: ['s3:GetObject', 's3:PutObject'],
+      actions: ['s3:*',],
       resources: [`${bucket.bucketArn}/uploaded/*`],
-      principals: [new iam.ServicePrincipal('lambda.amazonaws.com')],
+      principals: [new iam.ServicePrincipal('lambda.amazonaws.com')],      
     }));
 
     // Определение Lambda функции importProductsFile
@@ -43,7 +50,7 @@ export class ImportServiceStack extends cdk.Stack {
 
     // Настройка триггера S3 для Lambda функции
     bucket.addEventNotification(s3.EventType.OBJECT_CREATED, new s3n.LambdaDestination(importFileParserLambda), {
-      prefix: 'uploaded/',
+      prefix: 'uploaded',
     });
 
     // Предоставление прав на чтение и запись в S3 bucket для Lambda функций
@@ -56,7 +63,7 @@ export class ImportServiceStack extends cdk.Stack {
         defaultCorsPreflightOptions: {
           allowOrigins: apigateway.Cors.ALL_ORIGINS,
           allowMethods: apigateway.Cors.ALL_METHODS,    
-          allowHeaders: apigateway.Cors.DEFAULT_HEADERS,
+          allowHeaders: ['Content-Type,X-Amz-Date', 'Authorization', 'X-Api-Key', 'X-Amz-Security-Token'],
         },
     });
 
