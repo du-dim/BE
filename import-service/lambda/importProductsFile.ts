@@ -17,13 +17,17 @@ export const handler: APIGatewayProxyHandler = async (event) => {
 
     const command = new PutObjectCommand({
         Bucket: process.env.BUCKET_NAME,
-        Key: `uploaded/${name}`,        
+        Key: `uploaded/${name}`, 
     });
 
     const signedUrl = await getSignedUrl(s3, command, { expiresIn: 60 });
-
+    
     return {
         statusCode: 200,
         body: JSON.stringify({ signedUrl }),
+        headers: {
+            "Access-Control-Allow-Origin": "*",            
+            "Access-Control-Allow-Methods": "GET",
+          },
     };
 };

@@ -12,7 +12,7 @@ export const handler: S3Handler = async (event) => {
     for (const record of event.Records) {
         const { bucket, object } = record.s3;
         const params = {
-            Bucket: bucket.name,
+            Bucket: process.env.BUCKET_NAME,
             Key: object.key,
         };
         try {

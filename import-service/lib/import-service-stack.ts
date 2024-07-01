@@ -27,7 +27,7 @@ export class ImportServiceStack extends cdk.Stack {
       handler: 'importProductsFile.handler',
       code: lambda.Code.fromAsset('lambda'),
       environment: {
-          BUCKET_NAME: bucket.bucketName,
+        BUCKET_NAME: bucket.bucketName,        
       },
     });
 
@@ -36,6 +36,9 @@ export class ImportServiceStack extends cdk.Stack {
       runtime: lambda.Runtime.NODEJS_18_X,
       handler: 'importFileParser.handler',
       code: lambda.Code.fromAsset('lambda'),
+      environment: {
+        BUCKET_NAME: bucket.bucketName,        
+      },
     });
 
     // Настройка триггера S3 для Lambda функции
@@ -50,10 +53,23 @@ export class ImportServiceStack extends cdk.Stack {
     // Создание API Gateway
     const api = new apigateway.RestApi(this, 'ImportServiceApi', {
         restApiName: 'Import Service',
+        defaultCorsPreflightOptions: {
+          allowOrigins: apigateway.Cors.ALL_ORIGINS,
+          allowMethods: apigateway.Cors.ALL_METHODS,    
+          allowHeaders: apigateway.Cors.DEFAULT_HEADERS,
+        },
     });
 
     // Интеграция Lambda функции с API Gateway
     const importProductsFileIntegration = new apigateway.LambdaIntegration(importProductsFileLambda);
-    api.root.addResource('import').addMethod('GET', importProductsFileIntegration);
+    api.root.addResource('import').addMethod('GET', importProductsFileIntegration, {
+      authorizationType: apigateway.AuthorizationType.NONE,
+      requestParameters: {
+        'method.request.querystring.name': true,
+      },
+      requestValidatorOptions: {
+        validateRequestParameters: true,
+      }
+    });
   }
 }
