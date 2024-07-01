@@ -1,9 +1,10 @@
-import { S3 } from 'aws-sdk';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { APIGatewayProxyHandler } from 'aws-lambda';
 
-const s3 = new S3({ region: 'eu-west-1' });
+const s3 = new S3Client({ region: 'eu-west-1' });
 
-export const importProductsFile: APIGatewayProxyHandler = async (event) => {
+export const handler: APIGatewayProxyHandler = async (event) => {
     // Проверка наличия queryStringParameters и параметра name
     if (!event.queryStringParameters || !event.queryStringParameters.name) {
         return {
@@ -13,11 +14,13 @@ export const importProductsFile: APIGatewayProxyHandler = async (event) => {
     }
     
     const { name } = event.queryStringParameters;
-    const signedUrl = s3.getSignedUrl('putObject', {
-        Bucket: 'import-products-store',
-        Key: `uploaded/${name}`,
-        Expires: 60,
-    });   
+
+    const command = new PutObjectCommand({
+        Bucket: process.env.BUCKET_NAME,
+        Key: `uploaded/${name}`,        
+    });
+
+    const signedUrl = await getSignedUrl(s3, command, { expiresIn: 60 });
 
     return {
         statusCode: 200,
