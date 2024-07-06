@@ -2,6 +2,7 @@ import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
+import * as sqs from 'aws-cdk-lib/aws-sqs';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import { join } from 'path';
 
@@ -12,6 +13,11 @@ export class ProductServiceStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
+    // Создание SQS очереди
+    const catalogItemsQueue = new sqs.Queue(this, 'catalogItemsQueue', {
+      visibilityTimeout: cdk.Duration.seconds(300)
+    });
+    
     // Создание таблицы products
     const productsTable = new dynamodb.Table(this, 'ProductsTable', {
       partitionKey: { name: 'id', type: dynamodb.AttributeType.STRING },
@@ -24,6 +30,17 @@ export class ProductServiceStack extends cdk.Stack {
       partitionKey: { name: 'product_id', type: dynamodb.AttributeType.STRING },
       tableName: 'Stocks',
       removalPolicy: cdk.RemovalPolicy.DESTROY // Указывает политику удаления
+    });
+
+     // Создание Lambda функции для обработки пакетов
+     const catalogBatchProcess = new lambda.Function(this, 'catalogBatchProcess', {
+      runtime: lambda.Runtime.NODEJS_18_X,
+      handler: 'catalogBatchProcess.handler',
+      code: lambda.Code.fromAsset(join(__dirname, '../lambda')),
+      environment: {
+        PRODUCTS_TABLE_NAME: productsTable.tableName,
+        SNS_TOPIC_ARN: ''  // Позже будет заполнено
+      }
     });
        
     // Lambda function for getProductsList
@@ -66,7 +83,8 @@ export class ProductServiceStack extends cdk.Stack {
     stocksTable.grantReadData(getProductsById);
     productsTable.grantWriteData(createProduct);
     stocksTable.grantWriteData(createProduct);
-   
+    catalogItemsQueue.grantConsumeMessages(catalogBatchProcess);
+
     // API Gateway
     const api = new apigateway.RestApi(this, 'productsApi', {
       restApiName: 'Products Service',
