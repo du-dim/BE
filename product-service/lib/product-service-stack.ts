@@ -19,7 +19,8 @@ export class ProductServiceStack extends cdk.Stack {
 
     // Создание SQS очереди
     const catalogItemsQueue = new sqs.Queue(this, 'catalogItemsQueue', {
-      visibilityTimeout: cdk.Duration.seconds(300)
+      visibilityTimeout: cdk.Duration.seconds(300),
+      queueName: 'catalogItemsQueue',
     });
     
     // Создание таблицы products
