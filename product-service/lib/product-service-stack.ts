@@ -3,7 +3,11 @@ import { Construct } from 'constructs';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as sqs from 'aws-cdk-lib/aws-sqs';
+import * as sns from 'aws-cdk-lib/aws-sns';
+import * as subs from 'aws-cdk-lib/aws-sns-subscriptions';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
+import * as lambdaEventSources from 'aws-cdk-lib/aws-lambda-event-sources';
+import * as iam from 'aws-cdk-lib/aws-iam';
 import { join } from 'path';
 
 export class ProductServiceStack extends cdk.Stack {
@@ -96,13 +100,33 @@ export class ProductServiceStack extends cdk.Stack {
     });    
 
     // /products endpoint
-    const productsResource = api.root.addResource('products');
-    
+    const productsResource = api.root.addResource('products');    
     productsResource.addMethod('GET', new apigateway.LambdaIntegration(getProductsList));
     productsResource.addMethod('POST', new apigateway.LambdaIntegration(createProduct));
     
     // /products/{productId} endpoint
     const productResource = productsResource.addResource('{productId}');
-    productResource.addMethod('GET', new apigateway.LambdaIntegration(getProductsById));     
+    productResource.addMethod('GET', new apigateway.LambdaIntegration(getProductsById));    
+    
+    // Добавление источника событий SQS к Lambda
+    const eventSource = new lambdaEventSources.SqsEventSource(catalogItemsQueue, {
+      batchSize: 5
+    });
+    catalogBatchProcess.addEventSource(eventSource);
+
+    // Создание SNS темы
+    const createProductTopic = new sns.Topic(this, 'createProductTopic');
+
+    // Подписка по Email на тему SNS
+    createProductTopic.addSubscription(new subs.EmailSubscription('your-email@example.com'));
+
+    // Добавление политики для Lambda для публикации в SNS тему
+    catalogBatchProcess.addToRolePolicy(new iam.PolicyStatement({
+      actions: ['sns:Publish'],
+      resources: [createProductTopic.topicArn]
+    }));
+
+    // Обновление переменной окружения для SNS_TOPIC_ARN
+    catalogBatchProcess.addEnvironment('SNS_TOPIC_ARN', createProductTopic.topicArn);
   }  
 }
