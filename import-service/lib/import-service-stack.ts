@@ -20,10 +20,13 @@ export class ImportServiceStack extends cdk.Stack {
         }
       ]
     });
+    const accountId = cdk.Aws.ACCOUNT_ID;
+    const region = cdk.Aws.REGION;
+    const queueName = 'catalogItemsQueue';
 
     // Добавление политики ресурса для предоставления прав на выполнение операций в S3
     bucket.addToResourcePolicy(new iam.PolicyStatement({
-      actions: ['s3:*',],
+      actions: ['s3:*'],
       resources: [`${bucket.bucketArn}/uploaded/*`, `${bucket.bucketArn}/parsed/*`],
       principals: [new iam.ServicePrincipal('lambda.amazonaws.com')],      
     }));
@@ -44,9 +47,15 @@ export class ImportServiceStack extends cdk.Stack {
       handler: 'importFileParser.handler',
       code: lambda.Code.fromAsset('lambda'),
       environment: {
-        BUCKET_NAME: bucket.bucketName,        
+        BUCKET_NAME: bucket.bucketName,   
+        CATALOG_ITEMS_QUEUE_URL: `https://sqs.${region}.amazonaws.com/${accountId}/${queueName}`
       },
     });
+    // Разрешение Lambda отправлять сообщения в SQS очередь
+    importFileParserLambda.addToRolePolicy(new iam.PolicyStatement({
+      actions: ['sqs:SendMessage'],
+      resources: [`arn:aws:sqs:${region}:${accountId}:${queueName}`]
+    }));
 
     // Настройка триггера S3 для Lambda функции
     bucket.addEventNotification(s3.EventType.OBJECT_CREATED, new s3n.LambdaDestination(importFileParserLambda), {
