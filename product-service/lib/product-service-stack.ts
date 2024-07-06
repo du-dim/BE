@@ -115,10 +115,12 @@ export class ProductServiceStack extends cdk.Stack {
     catalogBatchProcess.addEventSource(eventSource);
 
     // Создание SNS темы
-    const createProductTopic = new sns.Topic(this, 'createProductTopic');
+    const createProductTopic = new sns.Topic(this, 'createProductTopic', {
+      topicName: 'ProductTopic'
+    });
 
     // Подписка по Email на тему SNS
-    createProductTopic.addSubscription(new subs.EmailSubscription('your-email@example.com'));
+    createProductTopic.addSubscription(new subs.EmailSubscription('dzm.dubovik@gmail.com'));
 
     // Добавление политики для Lambda для публикации в SNS тему
     catalogBatchProcess.addToRolePolicy(new iam.PolicyStatement({
