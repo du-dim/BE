@@ -21,8 +21,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     });
 
     const signedUrl = await getSignedUrl(s3, command, { expiresIn: 3600 }) as any;
-    console.log('signedUrl: ', signedUrl);
-
+    
     return {
         statusCode: 200,
         body: JSON.stringify(signedUrl),

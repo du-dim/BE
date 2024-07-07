@@ -36,6 +36,7 @@ export class ImportServiceStack extends cdk.Stack {
       runtime: lambda.Runtime.NODEJS_18_X,
       handler: 'importProductsFile.handler',
       code: lambda.Code.fromAsset('lambda'),
+      functionName: 'importProductsFile',
       environment: {
         BUCKET_NAME: bucket.bucketName,        
       },
@@ -46,6 +47,7 @@ export class ImportServiceStack extends cdk.Stack {
       runtime: lambda.Runtime.NODEJS_18_X,
       handler: 'importFileParser.handler',
       code: lambda.Code.fromAsset('lambda'),
+      functionName: 'importFileParser',
       environment: {
         BUCKET_NAME: bucket.bucketName,   
         CATALOG_ITEMS_QUEUE_URL: `https://sqs.${region}.amazonaws.com/${accountId}/${queueName}`
@@ -59,12 +61,9 @@ export class ImportServiceStack extends cdk.Stack {
 
     // Настройка триггера S3 для Lambda функции
     bucket.addEventNotification(s3.EventType.OBJECT_CREATED, new s3n.LambdaDestination(importFileParserLambda), {
-      prefix: 'uploaded',
+      prefix: 'uploaded/',
     });
-    bucket.addEventNotification(s3.EventType.OBJECT_CREATED_COPY, new s3n.LambdaDestination(importFileParserLambda), {
-      prefix: 'parsed',
-    })
-    
+       
     // Предоставление прав на чтение и запись в S3 bucket для Lambda функций
     bucket.grantReadWrite(importProductsFileLambda);
     bucket.grantReadWrite(importFileParserLambda);

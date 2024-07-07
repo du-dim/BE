@@ -32,7 +32,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     }
 
     const product = {
-      id: randomUUID(),
+      id: body.id ? body.id : randomUUID(),
       title: body.title,
       description: body.description || '',
       price: body.price
@@ -42,8 +42,6 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       product_id: product.id,
       count: body.count
     };
-
-    console.log(product, stock);
 
     const paramsProduct = {
       TableName: productsTable,

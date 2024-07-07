@@ -21,15 +21,16 @@ export class ProductServiceStack extends cdk.Stack {
     const catalogItemsQueue = new sqs.Queue(this, 'catalogItemsQueue', {
       visibilityTimeout: cdk.Duration.seconds(300),
       queueName: 'catalogItemsQueue',
+      removalPolicy: cdk.RemovalPolicy.DESTROY
     });
-    
+
     // Создание таблицы products
     const productsTable = new dynamodb.Table(this, 'ProductsTable', {
       partitionKey: { name: 'id', type: dynamodb.AttributeType.STRING },
       tableName: 'Products',
       removalPolicy: cdk.RemovalPolicy.DESTROY // Указывает политику удаления
     });
-    
+
     // Создание таблицы stocks
     const stocksTable = new dynamodb.Table(this, 'StocksTable', {
       partitionKey: { name: 'product_id', type: dynamodb.AttributeType.STRING },
@@ -37,22 +38,25 @@ export class ProductServiceStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.DESTROY // Указывает политику удаления
     });
 
-     // Создание Lambda функции для обработки пакетов
-     const catalogBatchProcess = new lambda.Function(this, 'catalogBatchProcess', {
+    // Создание Lambda функции catalogBatchProcess для обработки пакетов
+    const catalogBatchProcess = new lambda.Function(this, 'catalogBatchProcess', {
       runtime: lambda.Runtime.NODEJS_18_X,
       handler: 'catalogBatchProcess.handler',
       code: lambda.Code.fromAsset(join(__dirname, '../lambda')),
+      functionName: 'catalogBatchProcess',
       environment: {
         PRODUCTS_TABLE_NAME: productsTable.tableName,
+        STOCKS_TABLE_NAME: stocksTable.tableName,
         SNS_TOPIC_ARN: ''  // Позже будет заполнено
       }
     });
-       
+
     // Lambda function for getProductsList
     const getProductsList = new lambda.Function(this, 'getProductsList', {
       runtime: lambda.Runtime.NODEJS_18_X,
       handler: 'getProductsList.handler',
       code: lambda.Code.fromAsset(join(__dirname, '../lambda')),
+      functionName: 'getProductsList',
       environment: {
         PRODUCTS_TABLE_NAME: productsTable.tableName,
         STOCKS_TABLE_NAME: stocksTable.tableName,
@@ -64,17 +68,19 @@ export class ProductServiceStack extends cdk.Stack {
       runtime: lambda.Runtime.NODEJS_18_X,
       handler: 'getProductsById.handler',
       code: lambda.Code.fromAsset(join(__dirname, '../lambda')),
+      functionName: 'getProductsById',
       environment: {
         PRODUCTS_TABLE_NAME: productsTable.tableName,
         STOCKS_TABLE_NAME: stocksTable.tableName,
       },
     });
-    
+
     // Lambda function for createProduct
     const createProduct = new lambda.Function(this, 'createProduct', {
       runtime: lambda.Runtime.NODEJS_18_X,
       handler: 'createProduct.handler',
       code: lambda.Code.fromAsset(join(__dirname, '../lambda')),
+      functionName: 'createProduct',
       environment: {
         PRODUCTS_TABLE_NAME: productsTable.tableName,
         STOCKS_TABLE_NAME: stocksTable.tableName,
@@ -83,12 +89,14 @@ export class ProductServiceStack extends cdk.Stack {
 
     // Предоставление прав на чтение данных из таблиц для Lambda функций
     productsTable.grantReadData(getProductsList);
-    productsTable.grantReadData(getProductsById);    
+    productsTable.grantReadData(getProductsById);
     stocksTable.grantReadData(getProductsList);
     stocksTable.grantReadData(getProductsById);
     productsTable.grantWriteData(createProduct);
     stocksTable.grantWriteData(createProduct);
     catalogItemsQueue.grantConsumeMessages(catalogBatchProcess);
+    productsTable.grantWriteData(catalogBatchProcess);
+    stocksTable.grantWriteData(catalogBatchProcess);
 
     // API Gateway
     const api = new apigateway.RestApi(this, 'productsApi', {
@@ -96,19 +104,19 @@ export class ProductServiceStack extends cdk.Stack {
       description: 'This service serves products.',
       defaultCorsPreflightOptions: {
         allowOrigins: apigateway.Cors.ALL_ORIGINS,
-        allowMethods: apigateway.Cors.ALL_METHODS,        
+        allowMethods: apigateway.Cors.ALL_METHODS,
       },
-    });    
+    });
 
     // /products endpoint
-    const productsResource = api.root.addResource('products');    
+    const productsResource = api.root.addResource('products');
     productsResource.addMethod('GET', new apigateway.LambdaIntegration(getProductsList));
     productsResource.addMethod('POST', new apigateway.LambdaIntegration(createProduct));
-    
+
     // /products/{productId} endpoint
     const productResource = productsResource.addResource('{productId}');
-    productResource.addMethod('GET', new apigateway.LambdaIntegration(getProductsById));    
-    
+    productResource.addMethod('GET', new apigateway.LambdaIntegration(getProductsById));
+
     // Добавление источника событий SQS к Lambda
     const eventSource = new lambdaEventSources.SqsEventSource(catalogItemsQueue, {
       batchSize: 5
@@ -117,7 +125,7 @@ export class ProductServiceStack extends cdk.Stack {
 
     // Создание SNS темы
     const createProductTopic = new sns.Topic(this, 'createProductTopic', {
-      topicName: 'ProductTopic'
+      topicName: 'ProductTopic',
     });
 
     // Подписка по Email на тему SNS
@@ -128,8 +136,12 @@ export class ProductServiceStack extends cdk.Stack {
       actions: ['sns:Publish'],
       resources: [createProductTopic.topicArn]
     }));
+    catalogBatchProcess.addToRolePolicy(new iam.PolicyStatement({
+      actions: ['dynamodb:PutItem'],
+      resources: [stocksTable.tableArn, productsTable.tableArn]
+    }));
 
     // Обновление переменной окружения для SNS_TOPIC_ARN
     catalogBatchProcess.addEnvironment('SNS_TOPIC_ARN', createProductTopic.topicArn);
-  }  
+  }
 }
