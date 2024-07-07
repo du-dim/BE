@@ -142,6 +142,15 @@ export class ProductServiceStack extends cdk.Stack {
       topicName: 'ProductTopic',
     });
 
+    const filterPolicyLowPrice = {
+      price: sns.SubscriptionFilter.numericFilter({ lessThanOrEqualTo: 100 }),
+    };
+
+    // Подписка по Email для продуктов с низкой ценой
+    createProductTopic.addSubscription(new subs.EmailSubscription('dim3dubovik7@gmail.com', {
+      filterPolicy: filterPolicyLowPrice,
+    }));
+
     // Подписка по Email на тему SNS
     createProductTopic.addSubscription(new subs.EmailSubscription('dzm.dubovik@gmail.com'));
 

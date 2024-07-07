@@ -43,9 +43,7 @@ export const handler = async (event: any) => {
 
     const productPutCommand = new PutCommand(paramsProduct);
     const stockPutCommand = new PutCommand(paramsStock);
-    await dynamodb.send(productPutCommand),
-    await dynamodb.send(stockPutCommand)
-
+    
     try {
       await dynamodb.send(productPutCommand);
       await dynamodb.send(stockPutCommand);
