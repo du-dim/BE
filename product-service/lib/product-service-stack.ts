@@ -86,6 +86,17 @@ export class ProductServiceStack extends cdk.Stack {
         STOCKS_TABLE_NAME: stocksTable.tableName,
       },
     });
+    // Lambda function for deleteProduct
+    const deleteProduct = new lambda.Function(this, 'deleteProduct', {
+      runtime: lambda.Runtime.NODEJS_18_X,
+      handler: 'deleteProduct.handler',
+      code: lambda.Code.fromAsset(join(__dirname, '../lambda')),
+      functionName: 'deleteProduct',
+      environment: {
+        PRODUCTS_TABLE_NAME: productsTable.tableName,
+        STOCKS_TABLE_NAME: stocksTable.tableName,
+      },
+    });
 
     // Предоставление прав на чтение данных из таблиц для Lambda функций
     productsTable.grantReadData(getProductsList);
@@ -94,6 +105,8 @@ export class ProductServiceStack extends cdk.Stack {
     stocksTable.grantReadData(getProductsById);
     productsTable.grantWriteData(createProduct);
     stocksTable.grantWriteData(createProduct);
+    productsTable.grantReadWriteData(deleteProduct);
+    stocksTable.grantReadWriteData(deleteProduct);
     catalogItemsQueue.grantConsumeMessages(catalogBatchProcess);
     productsTable.grantWriteData(catalogBatchProcess);
     stocksTable.grantWriteData(catalogBatchProcess);
@@ -116,6 +129,7 @@ export class ProductServiceStack extends cdk.Stack {
     // /products/{productId} endpoint
     const productResource = productsResource.addResource('{productId}');
     productResource.addMethod('GET', new apigateway.LambdaIntegration(getProductsById));
+    productResource.addMethod('DELETE', new apigateway.LambdaIntegration(deleteProduct));
 
     // Добавление источника событий SQS к Lambda
     const eventSource = new lambdaEventSources.SqsEventSource(catalogItemsQueue, {
