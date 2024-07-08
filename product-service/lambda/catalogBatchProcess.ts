@@ -12,9 +12,10 @@ const productsTable = process.env.PRODUCTS_TABLE_NAME!;
 const stocksTable = process.env.STOCKS_TABLE_NAME!;
 
 export const handler = async (event: any) => {  
+  
   for (const record of event.Records) {
     const payload = JSON.parse(record.body);    
-    if (!payload.title || !payload.price || [undefined, null, NaN].includes(payload.count)) {
+    if (!payload.title || !payload.price || [undefined, null, NaN].includes(payload.count) || payload.count <= 0)  {
       console.error('Title, price, and count are required', payload);       
     }
     if (!payload.id) {
@@ -22,14 +23,14 @@ export const handler = async (event: any) => {
     }
    
     const product = {
-      id: `${payload.id}`,
-      title: `${payload.title}`,
-      description: `${payload.description}`,
-      price: +payload.price
+      id: payload.id,
+      title: payload.title,
+      description: payload.description,
+      price: payload.price
     };
     const stock = {
       product_id: product.id,
-      count: +payload.count
+      count: payload.count
     };
 
     const paramsProduct = {
@@ -53,7 +54,7 @@ export const handler = async (event: any) => {
         Message: JSON.stringify(payload),
         Subject: 'New Product Created'
       });
-
+      console.log('Publishing to SNS:', JSON.stringify(payload));
       await sns.send(publishCommand);
 
     } catch (error) {

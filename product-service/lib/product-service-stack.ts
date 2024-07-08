@@ -143,7 +143,7 @@ export class ProductServiceStack extends cdk.Stack {
     });
 
     const filterPolicyLowPrice = {
-      price: sns.SubscriptionFilter.numericFilter({ lessThanOrEqualTo: 100 }),
+      price: sns.SubscriptionFilter.numericFilter({ between: { start: 0, stop: 10 } }),
     };
 
     // Подписка по Email для продуктов с низкой ценой
