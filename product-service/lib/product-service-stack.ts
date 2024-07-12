@@ -98,6 +98,11 @@ export class ProductServiceStack extends cdk.Stack {
       },
     });
 
+    // Создание SNS темы
+    const createProductTopic = new sns.Topic(this, 'createProductTopic', {
+      topicName: 'ProductTopic',
+    });
+
     // Предоставление прав на чтение данных из таблиц для Lambda функций
     productsTable.grantReadData(getProductsList);
     productsTable.grantReadData(getProductsById);
@@ -110,6 +115,7 @@ export class ProductServiceStack extends cdk.Stack {
     catalogItemsQueue.grantConsumeMessages(catalogBatchProcess);
     productsTable.grantWriteData(catalogBatchProcess);
     stocksTable.grantWriteData(catalogBatchProcess);
+    createProductTopic.grantPublish(catalogBatchProcess);
 
     // API Gateway
     const api = new apigateway.RestApi(this, 'productsApi', {
@@ -137,18 +143,11 @@ export class ProductServiceStack extends cdk.Stack {
     });
     catalogBatchProcess.addEventSource(eventSource);
 
-    // Создание SNS темы
-    const createProductTopic = new sns.Topic(this, 'createProductTopic', {
-      topicName: 'ProductTopic',
-    });
-
-    const filterPolicyLowPrice = {
-      price: sns.SubscriptionFilter.numericFilter({ between: { start: 0, stop: 10 } }),
-    };
-
     // Подписка по Email для продуктов с низкой ценой
     createProductTopic.addSubscription(new subs.EmailSubscription('dim3dubovik7@gmail.com', {
-      filterPolicy: filterPolicyLowPrice,
+      filterPolicy: {
+        price: sns.SubscriptionFilter.numericFilter({ between: { start: 0, stop: 10 } })
+      },
     }));
 
     // Подписка по Email на тему SNS
@@ -156,9 +155,11 @@ export class ProductServiceStack extends cdk.Stack {
 
     // Добавление политики для Lambda для публикации в SNS тему
     catalogBatchProcess.addToRolePolicy(new iam.PolicyStatement({
-      actions: ['sns:Publish'],
-      resources: [createProductTopic.topicArn]
+      actions: ['sns:Publish',],
+      resources: [createProductTopic.topicArn],
     }));
+    
+
     catalogBatchProcess.addToRolePolicy(new iam.PolicyStatement({
       actions: ['dynamodb:PutItem'],
       resources: [stocksTable.tableArn, productsTable.tableArn]
