@@ -9,7 +9,7 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 export class ImportServiceStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
-    
+
     const bucket = new s3.Bucket(this, 'ImportBucket', {
       bucketName: 'import-products-store',
       removalPolicy: cdk.RemovalPolicy.DESTROY,
@@ -84,8 +84,8 @@ export class ImportServiceStack extends cdk.Stack {
     const basicAuthorizerArn = cdk.Fn.importValue('BasicAuthorizerArn');
 
     // Настройка авторизатора
-    const authorizer = new apigateway.RequestAuthorizer(this, 'basicAuthorizer', {
-      handler: lambda.Function.fromFunctionArn(this, 'basicAuthorizer', basicAuthorizerArn),
+    const authorizer = new apigateway.RequestAuthorizer(this, 'importServiceBasicAuthorizer', {
+      handler: lambda.Function.fromFunctionArn(this, 'importServiceBasicAuthorizerHandler', basicAuthorizerArn),
       identitySources: [apigateway.IdentitySource.header('Authorization')],
     });
 

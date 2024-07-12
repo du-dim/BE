@@ -6,6 +6,11 @@ import * as dotenv from 'dotenv';
 
 dotenv.config();
 
+// Получение необходимых переменных окружения
+const environmentVariables = {
+  dudim: process.env.dudim!,
+};
+
 export class AuthorizationServiceStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
@@ -15,7 +20,7 @@ export class AuthorizationServiceStack extends cdk.Stack {
       runtime: lambda.Runtime.NODEJS_18_X,
       handler: 'basicAuthorizer.handler',
       code: lambda.Code.fromAsset(path.join(__dirname, '../lambda')),
-      environment: process.env as { [key: string]: string }, // Преобразование типов
+      environment: environmentVariables,
     });
 
     // Экспорт функции для использования в других сервисах

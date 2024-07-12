@@ -33,14 +33,7 @@ export const handler = async (
   const decodedToken = Buffer.from(token, 'base64').toString('utf-8');
   const [username, password] = decodedToken.split(':');
 
-  const envVariables: { [key: string]: string } = {};
-  for (const [key, value] of Object.entries(process.env)) {
-    if (value) {
-      envVariables[key] = value;
-    }
-  }
-
-  if (envVariables[username] === password) {
+  if (process.env[username] === password) {
     callback(null, generatePolicy(username, 'Allow', event.methodArn));
   } else {
     callback('Unauthorized'); // Invalid credentials
