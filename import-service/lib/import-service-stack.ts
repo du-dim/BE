@@ -9,14 +9,15 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 export class ImportServiceStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
+    
     const bucket = new s3.Bucket(this, 'ImportBucket', {
       bucketName: 'import-products-store',
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       cors: [
         {
-            allowedOrigins: ['*'],
-            allowedMethods: [s3.HttpMethods.GET, s3.HttpMethods.PUT, s3.HttpMethods.POST, s3.HttpMethods.DELETE, s3.HttpMethods.HEAD],
-            allowedHeaders: ['*'],            
+          allowedOrigins: ['*'],
+          allowedMethods: [s3.HttpMethods.GET, s3.HttpMethods.PUT, s3.HttpMethods.POST, s3.HttpMethods.DELETE, s3.HttpMethods.HEAD],
+          allowedHeaders: ['*'],            
         }
       ]
     });
@@ -71,18 +72,28 @@ export class ImportServiceStack extends cdk.Stack {
 
     // Создание API Gateway
     const api = new apigateway.RestApi(this, 'ImportServiceApi', {
-        restApiName: 'Import Service',
-        defaultCorsPreflightOptions: {
-          allowOrigins: apigateway.Cors.ALL_ORIGINS,
-          allowMethods: apigateway.Cors.ALL_METHODS,    
-          allowHeaders: ['Content-Type,X-Amz-Date', 'Authorization', 'X-Api-Key', 'X-Amz-Security-Token'],
-        },
+      restApiName: 'Import Service',
+      defaultCorsPreflightOptions: {
+        allowOrigins: apigateway.Cors.ALL_ORIGINS,
+        allowMethods: apigateway.Cors.ALL_METHODS,    
+        allowHeaders: ['Content-Type,X-Amz-Date', 'Authorization', 'X-Api-Key', 'X-Amz-Security-Token'],
+      },
+    });
+
+    // Импорт ARN авторизатора
+    const basicAuthorizerArn = cdk.Fn.importValue('BasicAuthorizerArn');
+
+    // Настройка авторизатора
+    const authorizer = new apigateway.RequestAuthorizer(this, 'basicAuthorizer', {
+      handler: lambda.Function.fromFunctionArn(this, 'basicAuthorizer', basicAuthorizerArn),
+      identitySources: [apigateway.IdentitySource.header('Authorization')],
     });
 
     // Интеграция Lambda функции с API Gateway
     const importProductsFileIntegration = new apigateway.LambdaIntegration(importProductsFileLambda);
     api.root.addResource('import').addMethod('GET', importProductsFileIntegration, {
-      authorizationType: apigateway.AuthorizationType.NONE,
+      authorizationType: apigateway.AuthorizationType.CUSTOM,
+      authorizer: authorizer,
       requestParameters: {
         'method.request.querystring.name': true,
       },
